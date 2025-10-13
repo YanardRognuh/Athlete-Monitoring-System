@@ -79,18 +79,3 @@ export function ToastContainer({ toasts, removeToast }) {
     </div>
   );
 }
-
-// CSS for animation (add to your index.css or component)
-// @keyframes slide-in {
-//   from {
-//     transform: translateX(100%);
-//     opacity: 0;
-//   }
-//   to {
-//     transform: translateX(0);
-//     opacity: 1;
-//   }
-// }
-// .animate-slide-in {
-//   animation: slide-in 0.3s ease-out;
-// }

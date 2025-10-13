@@ -25,7 +25,8 @@ export default function CoachPage() {
               element={<Navigate to="/coach/dashboard" replace />}
             />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/athletes" element={<AthleteProfile />} />
+            <Route path="/athletes" element={<Dashboard />} />
+            <Route path="/athletes/:id" element={<AthleteProfile />} />
             <Route path="/team" element={<TeamOverview />} />
           </Routes>
         </main>
