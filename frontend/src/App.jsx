@@ -1,35 +1,82 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContexts";
+import LoginPage from "./pages/LoginPage";
+import MedisPage from "./pages/MedisPage";
+import CoachPage from "./pages/CoachPage";
+import LoadingSkeleton from "./components/common/LoadingSkeleton";
 
-function App() {
-  const [count, setCount] = useState(0)
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, loading } = useAuth();
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  if (loading) {
+    return <LoadingSkeleton />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
 }
 
-export default App
+function AppRoutes() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" replace /> : <LoginPage />}
+      />
+
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            {user?.role === "medis" ? (
+              <Navigate to="/medis" replace />
+            ) : (
+              <Navigate to="/coach" replace />
+            )}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/medis/*"
+        element={
+          <ProtectedRoute allowedRoles={["medis"]}>
+            <MedisPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/coach/*"
+        element={
+          <ProtectedRoute allowedRoles={["pelatih"]}>
+            <CoachPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+export default App;
