@@ -288,15 +288,18 @@ router.get("/team/overview", (req, res) => {
     const recentAssessments = db
       .prepare(
         `
-      SELECT DISTINCT ON (a.athlete_id) 
-        am.value
-      FROM assessments a
-      JOIN assessment_metrics am ON a.id = am.assessment_id
-      JOIN athletes ath ON a.athlete_id = ath.id
-      WHERE ath.team_id = ? 
-        AND am.metric_category = 'Pemeriksaan Fisik'
-      ORDER BY a.athlete_id, a.date DESC
-    `
+    SELECT am.value
+    FROM assessments a1
+    JOIN assessment_metrics am ON a1.id = am.assessment_id
+    JOIN athletes ath ON a1.athlete_id = ath.id
+    WHERE ath.team_id = ?
+      AND am.metric_category = 'Pemeriksaan Fisik'
+      AND a1.date = (
+        SELECT MAX(a2.date)
+        FROM assessments a2
+        WHERE a2.athlete_id = a1.athlete_id
+      )
+  `
       )
       .all(req.user.teamId);
 
