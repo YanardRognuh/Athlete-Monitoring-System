@@ -29,6 +29,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { AlertTriangle, Lightbulb } from "lucide-react";
 
 const METRIC_CATEGORIES = [
   { value: "Pemeriksaan Fisik", label: "Physical" },
@@ -46,6 +47,10 @@ export default function AthleteProfile() {
   const [sleepData, setSleepData] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("Pemeriksaan Fisik");
   const [selectedMetric, setSelectedMetric] = useState(null);
+  const [recommendations, setRecommendations] = useState({
+    ruleBased: [],
+    trainingSuggestions: [],
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,17 +67,20 @@ export default function AthleteProfile() {
 
   const fetchAthleteData = async () => {
     try {
-      const [athleteRes, physicalRes, mentalRes, sleepRes] = await Promise.all([
-        athleteAPI.getById(id),
-        dashboardAPI.getPhysical(id),
-        dashboardAPI.getMental(id),
-        dashboardAPI.getSleep(id),
-      ]);
+      const [athleteRes, physicalRes, mentalRes, sleepRes, recommendationRes] =
+        await Promise.all([
+          athleteAPI.getById(id),
+          dashboardAPI.getPhysical(id),
+          dashboardAPI.getMental(id),
+          dashboardAPI.getSleep(id),
+          dashboardAPI.getRecommendations(id),
+        ]);
 
       setAthlete(athleteRes.data);
       setPhysicalData(physicalRes.data);
       setMentalData(mentalRes.data);
       setSleepData(sleepRes.data);
+      setRecommendations(recommendationRes.data);
     } catch (err) {
       console.error("Failed to fetch athlete data:", err);
     } finally {
@@ -97,8 +105,8 @@ export default function AthleteProfile() {
     return (
       <div className="space-y-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div key={i} className="p-6 bg-white rounded-lg animate-pulse">
+            <div className="w-1/3 h-6 mb-4 bg-gray-200 rounded"></div>
             <div className="h-64 bg-gray-200 rounded"></div>
           </div>
         ))}
@@ -108,7 +116,7 @@ export default function AthleteProfile() {
 
   if (!athlete) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+      <div className="p-4 text-red-700 border border-red-200 rounded-lg bg-red-50">
         Athlete not found
       </div>
     );
@@ -167,7 +175,7 @@ export default function AthleteProfile() {
       <div className="mb-6">
         <button
           onClick={() => navigate("/coach/dashboard")}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className="flex items-center mb-4 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -176,7 +184,7 @@ export default function AthleteProfile() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{athlete.name}</h2>
-            <div className="flex items-center space-x-4 mt-2">
+            <div className="flex items-center mt-2 space-x-4">
               <span className="text-gray-600">{athlete.position}</span>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -206,7 +214,7 @@ export default function AthleteProfile() {
       </div>
 
       {/* Performance Tracking Chart */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="p-6 mb-6 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <TrendingUp className="w-5 h-5 text-indigo-600" />
@@ -279,15 +287,15 @@ export default function AthleteProfile() {
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="py-12 text-center text-gray-500">
             No performance data available
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
         {/* Physical Assessment - Spider Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <Activity className="w-5 h-5 text-green-600" />
@@ -322,15 +330,15 @@ export default function AthleteProfile() {
               </RadarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="py-12 text-center text-gray-500">
               No physical assessment data
             </div>
           )}
         </div>
 
         {/* Mental Health - Bar Chart */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center space-x-2 mb-4">
+        <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <div className="flex items-center mb-4 space-x-2">
             <Brain className="w-5 h-5 text-purple-600" />
             <h3 className="text-lg font-semibold text-gray-900">
               Mental Health
@@ -348,7 +356,7 @@ export default function AthleteProfile() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="text-center py-12 text-gray-500">
+            <div className="py-12 text-center text-gray-500">
               No mental health data
             </div>
           )}
@@ -356,15 +364,15 @@ export default function AthleteProfile() {
       </div>
 
       {/* Sleep Quality */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
+      <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div className="flex items-center mb-4 space-x-2">
           <Moon className="w-5 h-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900">Sleep Quality</h3>
         </div>
 
         {sleepData?.warning && (
-          <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg flex items-center">
-            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+          <div className="flex items-center px-4 py-3 mb-4 text-yellow-800 border border-yellow-200 rounded-lg bg-yellow-50">
+            <AlertCircle className="flex-shrink-0 w-5 h-5 mr-2" />
             {sleepData.warning}
           </div>
         )}
@@ -381,11 +389,72 @@ export default function AthleteProfile() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="text-center py-12 text-gray-500">
+          <div className="py-12 text-center text-gray-500">
             No sleep quality data
           </div>
         )}
       </div>
+
+      {/* Rule-Based Recommendations */}
+      {recommendations.ruleBased && recommendations.ruleBased.length > 0 && (
+        <div className="p-6 mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <div className="flex items-center mb-4 space-x-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              Medical Recommendations
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {recommendations.ruleBased.map((rec, idx) => (
+              <div
+                key={idx}
+                className="p-4 border border-yellow-200 rounded-lg bg-yellow-50"
+              >
+                <p className="text-gray-800">{rec.recommendation}</p>
+                {rec.priority && (
+                  <span className="inline-block px-2 py-1 mt-2 text-xs font-medium text-yellow-800 bg-yellow-100 rounded">
+                    Priority: {rec.priority}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Training Suggestions */}
+      {recommendations.trainingSuggestions &&
+        recommendations.trainingSuggestions.length > 0 && (
+          <div className="p-6 mt-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div className="flex items-center mb-4 space-x-2">
+              <Dumbbell className="w-5 h-5 text-indigo-600" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Training Suggestions
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {recommendations.trainingSuggestions.map((exercise) => (
+                <div
+                  key={exercise.exercise_id}
+                  className="p-4 border border-gray-200 rounded-lg"
+                >
+                  <h4 className="font-medium text-gray-900">{exercise.name}</h4>
+                  <p className="mt-1 text-sm text-gray-600">
+                    {exercise.description || "-"}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="px-2 py-1 text-xs text-blue-800 bg-blue-100 rounded">
+                      {exercise.type}
+                    </span>
+                    <span className="px-2 py-1 text-xs text-purple-800 bg-purple-100 rounded">
+                      {exercise.focus_area}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
     </div>
   );
 }

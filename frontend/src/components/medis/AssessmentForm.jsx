@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { athleteAPI, assessmentAPI } from "../../services/api";
 import { Save, AlertCircle } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
 
 const METRIC_STRUCTURE = {
   Rehabilitasi: ["Cedera", "Pemulihan"],
@@ -32,8 +33,9 @@ export default function AssessmentForm() {
   const [notes, setNotes] = useState("");
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const { addToast } = useToast();
 
   useEffect(() => {
     fetchAthletes();
@@ -61,6 +63,7 @@ export default function AssessmentForm() {
   };
 
   const handleMetricChange = (category, metricName, value) => {
+    console.log(`Setting ${category}.${metricName} to ${value}`);
     setMetrics((prev) => ({
       ...prev,
       [category]: {
@@ -74,13 +77,16 @@ export default function AssessmentForm() {
     e.preventDefault();
 
     if (!selectedAthlete) {
-      setError("Please select an athlete");
+      addToast("Please select an athlete", "error"); // ← Show toast
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const confirmSave = async () => {
+    setShowConfirm(false);
     setLoading(true);
-    setError("");
-    setSuccess(false);
 
     try {
       await assessmentAPI.create({
@@ -91,14 +97,14 @@ export default function AssessmentForm() {
         metrics,
       });
 
-      setSuccess(true);
+      addToast("Assessment created successfully!", "success"); // ← Show success toast
       setNotes("");
       setWeight("");
       initializeMetrics();
-
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to create assessment");
+      const errorMsg =
+        err.response?.data?.error || "Failed to create assessment";
+      addToast(errorMsg, "error"); // ← Show error toast
     } finally {
       setLoading(false);
     }
@@ -115,32 +121,51 @@ export default function AssessmentForm() {
     <div className="max-w-4xl">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Create Assessment</h2>
-        <p className="text-gray-600 mt-1">Record athlete medical assessment</p>
+        <p className="mt-1 text-gray-600">Record athlete medical assessment</p>
       </div>
 
-      {success && (
-        <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-          Assessment created successfully!
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-          <AlertCircle className="w-5 h-5 mr-2" />
-          {error}
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-md p-6 bg-white rounded-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              Confirm Save
+            </h3>
+            <p className="mb-4 text-gray-600">
+              Are you sure you want to save this assessment? This action cannot
+              be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSave}
+                disabled={loading}
+                className="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loading ? "Saving..." : "Yes, Save"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <h3 className="mb-4 text-lg font-semibold text-gray-900">
             Basic Information
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
                 Select Athlete *
               </label>
               <select
@@ -159,7 +184,7 @@ export default function AssessmentForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
                 Date *
               </label>
               <input
@@ -172,7 +197,7 @@ export default function AssessmentForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block mb-2 text-sm font-medium text-gray-700">
                 Weight (kg)
               </label>
               <input
@@ -187,7 +212,7 @@ export default function AssessmentForm() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block mb-2 text-sm font-medium text-gray-700">
               Notes
             </label>
             <textarea
@@ -204,34 +229,35 @@ export default function AssessmentForm() {
         {Object.entries(METRIC_STRUCTURE).map(([category, metricNames]) => (
           <div
             key={category}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
+            className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm"
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <h3 className="mb-4 text-lg font-semibold text-gray-900">
               {category}
             </h3>
 
             <div className="space-y-4">
               {metricNames.map((metricName) => (
                 <div key={metricName}>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-gray-700">
                       {metricName}
                     </label>
                     <span className="text-sm font-semibold text-gray-900">
-                      {metrics[category]?.[metricName] || 5} / 10
+                      {metrics[category]?.[metricName] ?? 5} / 10
                     </span>
                   </div>
 
                   <div className="flex items-center space-x-3">
+                    {/* Updated range input: barely visible track */}
                     <input
                       type="range"
                       min="0"
                       max="10"
-                      value={metrics[category]?.[metricName] || 5}
+                      value={metrics[category]?.[metricName] ?? 5}
                       onChange={(e) =>
                         handleMetricChange(category, metricName, e.target.value)
                       }
-                      className="flex-1 h-2 rounded-lg appearance-none cursor-pointer"
+                      className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer"
                       style={{
                         background: `linear-gradient(to right, ${getScaleColor(
                           metrics[category]?.[metricName] || 5
@@ -242,20 +268,28 @@ export default function AssessmentForm() {
                         }%, #e5e7eb ${
                           (metrics[category]?.[metricName] || 5) * 10
                         }%, #e5e7eb 100%)`,
+                        WebkitAppearance: "none",
+                        MozAppearance: "none",
+                        appearance: "none",
+                        height: "6px",
+                        borderRadius: "3px",
+                        outline: "none",
+                        boxShadow: "inset 0 1px 3px rgba(0,0,0,0.1)",
                       }}
                     />
+                    {/* Only show 0 and 10 buttons */}
                     <div className="flex space-x-1">
-                      {[0, 2, 4, 6, 8, 10].map((val) => (
+                      {[0, 10].map((val) => (
                         <button
                           key={val}
                           type="button"
                           onClick={() =>
                             handleMetricChange(category, metricName, val)
                           }
-                          className={`w-8 h-8 text-xs rounded ${
+                          className={`w-7 h-7 text-xs rounded text-gray-600 font-medium ${
                             metrics[category]?.[metricName] === val
                               ? "bg-indigo-600 text-white"
-                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              : "bg-gray-100 hover:bg-gray-200"
                           }`}
                         >
                           {val}
@@ -278,14 +312,14 @@ export default function AssessmentForm() {
               setNotes("");
               setWeight("");
             }}
-            className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Reset
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center space-x-2"
+            className="flex items-center px-6 py-2 space-x-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             <span>{loading ? "Saving..." : "Save Assessment"}</span>

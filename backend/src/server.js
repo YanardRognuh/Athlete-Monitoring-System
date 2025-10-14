@@ -16,8 +16,10 @@ app.use(express.json());
 const authRoutes = require("./routes/auth");
 const athleteRoutes = require("./routes/athletes");
 const assessmentRoutes = require("./routes/assessments");
-const { teamRouter, exerciseRouter } = require("./routes/exercises");
+const teamRouter = require("./routes/teams");
+const exerciseRouter = require("./routes/exercises").exerciseRouter;
 const dashboardRoutes = require("./routes/dashboard");
+const recommendationRoutes = require("./routes/recommendations");
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -26,6 +28,7 @@ app.use("/api/assessments", assessmentRoutes);
 app.use("/api/teams", teamRouter);
 app.use("/api/exercises", exerciseRouter);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/recommendations", recommendationRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

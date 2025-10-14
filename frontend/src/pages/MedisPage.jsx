@@ -1,13 +1,17 @@
+// frontend/src/pages/MedisPage.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
-import { Users, ClipboardList, Dumbbell, Settings } from "lucide-react";
+import { Users, ClipboardList, Dumbbell, Settings, MapPin } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import Sidebar from "../components/common/Sidebar";
 import AthleteList from "../components/medis/AthleteList";
+// import TeamList from "../components/medis/TeamList";
+import ExerciseLibrary from "../components/medis/ExerciseLibrary";
 import AssessmentForm from "../components/medis/AssessmentForm";
 import RecommendationManager from "../components/medis/RecommendationManager";
 
 const sidebarItems = [
   { path: "/medis/athletes", label: "Athletes", icon: Users },
+  // { path: "/medis/teams", label: "Teams", icon: MapPin },
   { path: "/medis/assessments", label: "Assessments", icon: ClipboardList },
   { path: "/medis/exercises", label: "Exercise Library", icon: Dumbbell },
   { path: "/medis/recommendations", label: "Recommendations", icon: Settings },
@@ -26,15 +30,9 @@ export default function MedisPage() {
               element={<Navigate to="/medis/athletes" replace />}
             />
             <Route path="/athletes" element={<AthleteList />} />
+            {/* <Route path="/teams" element={<TeamList />} />{" "} */}
             <Route path="/assessments" element={<AssessmentForm />} />
-            <Route
-              path="/exercises"
-              element={
-                <div className="text-gray-600">
-                  Exercise Library - Coming Soon
-                </div>
-              }
-            />
+            <Route path="/exercises" element={<ExerciseLibrary />} />
             <Route
               path="/recommendations"
               element={<RecommendationManager />}

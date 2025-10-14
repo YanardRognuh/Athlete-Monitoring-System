@@ -55,6 +55,8 @@ export const dashboardAPI = {
   getMental: (athleteId) => api.get(`/dashboard/athlete/${athleteId}/mental`),
   getSleep: (athleteId) => api.get(`/dashboard/athlete/${athleteId}/sleep`),
   getTeamOverview: () => api.get("/dashboard/team/overview"),
+  getRecommendations: (athleteId) =>
+    api.get(`/recommendations/athlete/${athleteId}`),
 };
 
 // Exercise APIs
@@ -70,6 +72,27 @@ export const exerciseAPI = {
 export const teamAPI = {
   getAll: () => api.get("/teams"),
   getMyTeam: () => api.get("/teams/my-team"),
+  getCriteriaWeights: () => api.get("/teams/criteria-weights"),
+  updateCriteriaWeight: (id, weight) =>
+    api.put(`/teams/criteria-weights/${id}`, { weight }),
+  getRecommendationRules: () => api.get("/teams/recommendation-rules"),
+  createRecommendationRule: (priority, triggerCondition, recommendationText) =>
+    api.post("/teams/recommendation-rules", {
+      priority,
+      triggerCondition,
+      recommendationText,
+    }),
+  updateRecommendationRule: (
+    id,
+    priority,
+    triggerCondition,
+    recommendationText
+  ) =>
+    api.put(`/teams/recommendation-rules/${id}`, {
+      priority,
+      triggerCondition,
+      recommendationText,
+    }),
 };
 
 export default api;

@@ -1,40 +1,43 @@
-import { useState } from "react";
-import { Settings, Plus, Trash2, Save } from "lucide-react";
+// frontend/src/components/medis/RecommendationManager.jsx
+import { useState, useEffect } from "react";
+import { teamAPI } from "../../services/api";
+import { Settings, Plus, Trash2, Save, AlertCircle } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
 
 export default function RecommendationManager() {
   const [activeTab, setActiveTab] = useState("weights");
-  const [criteriaWeights, setCriteriaWeights] = useState([
-    { id: 1, position: "Striker", criteria: "Kecepatan", weight: 25 },
-    { id: 2, position: "Striker", criteria: "Kekuatan", weight: 20 },
-    { id: 3, position: "Striker", criteria: "Kelincahan", weight: 20 },
-    { id: 4, position: "Midfielder", criteria: "Daya Tahan", weight: 30 },
-    { id: 5, position: "Midfielder", criteria: "Kecepatan", weight: 20 },
-    { id: 6, position: "Defender", criteria: "Kekuatan", weight: 30 },
-    { id: 7, position: "Defender", criteria: "Keseimbangan", weight: 25 },
-    { id: 8, position: "Goalkeeper", criteria: "Keseimbangan", weight: 25 },
-    { id: 9, position: "Goalkeeper", criteria: "Fleksibilitas", weight: 20 },
-  ]);
+  const [criteriaWeights, setCriteriaWeights] = useState([]);
+  const [recommendationRules, setRecommendationRules] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const { addToast } = useToast();
 
-  const [recommendationRules, setRecommendationRules] = useState([
-    {
-      id: 1,
-      priority: 1,
-      condition: "Physical Score < 5",
-      recommendation: "Increase training intensity gradually",
-    },
-    {
-      id: 2,
-      priority: 2,
-      condition: "Mental Stress > 7",
-      recommendation: "Schedule counseling session",
-    },
-    {
-      id: 3,
-      priority: 3,
-      condition: "Sleep < 7 hours",
-      recommendation: "Implement sleep hygiene protocol",
-    },
-  ]);
+  // Fetch real data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [weightsRes, rulesRes] = await Promise.all([
+          teamAPI.getCriteriaWeights(),
+          teamAPI.getRecommendationRules(),
+        ]);
+
+        // Convert weights from decimal (0.25) to percentage (25)
+        setCriteriaWeights(
+          weightsRes.data.map((w) => ({
+            ...w,
+            weight: Math.round(w.weight * 100),
+          }))
+        );
+        setRecommendationRules(rulesRes.data);
+      } catch (err) {
+        addToast("Failed to load recommendation data", "error");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const positions = ["Striker", "Midfielder", "Defender", "Goalkeeper"];
   const criteriaOptions = [
@@ -44,12 +47,23 @@ export default function RecommendationManager() {
     "Kecepatan",
     "Keseimbangan",
     "Kelincahan",
+    "Cedera",
+    "Pemulihan",
+    "Stress",
+    "Motivasi",
+    "Percaya Diri",
+    "Kohesi Tim",
+    "Fokus",
+    "Rata-rata Jam Tidur",
+    "Kualitas",
+    "Konsistensi",
   ];
 
   const handleWeightChange = (id, newWeight) => {
+    const weightNum = parseInt(newWeight) || 0;
     setCriteriaWeights((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, weight: parseInt(newWeight) } : item
+        item.id === id ? { ...item, weight: weightNum } : item
       )
     );
   };
@@ -61,7 +75,7 @@ export default function RecommendationManager() {
       {
         id: newId,
         position: "Striker",
-        criteria: "Kecepatan",
+        criteria_name: "Kecepatan",
         weight: 10,
       },
     ]);
@@ -78,8 +92,8 @@ export default function RecommendationManager() {
       {
         id: newId,
         priority: recommendationRules.length + 1,
-        condition: "",
-        recommendation: "",
+        trigger_condition: '{"Cedera": ">=7"}',
+        recommendation_text: "",
       },
     ]);
   };
@@ -88,10 +102,53 @@ export default function RecommendationManager() {
     setRecommendationRules((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleSave = () => {
-    // TODO: Implement API call to save data
-    alert("Settings saved successfully!");
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Save criteria weights (convert % → decimal)
+      await Promise.all(
+        criteriaWeights.map((item) =>
+          teamAPI.updateCriteriaWeight(item.id, item.weight / 100)
+        )
+      );
+
+      // Save recommendation rules
+      await Promise.all(
+        recommendationRules.map((rule) =>
+          rule.id > 0 && rule.id <= recommendationRules.length
+            ? teamAPI.updateRecommendationRule(
+                rule.id,
+                rule.priority,
+                rule.trigger_condition,
+                rule.recommendation_text
+              )
+            : teamAPI.createRecommendationRule(
+                rule.priority,
+                rule.trigger_condition,
+                rule.recommendation_text
+              )
+        )
+      );
+
+      addToast("Recommendation system updated successfully!", "success");
+    } catch (err) {
+      addToast(err.response?.data?.error || "Failed to save changes", "error");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="p-6 bg-white rounded-lg animate-pulse">
+          <div className="w-1/3 h-6 mb-4 bg-gray-200 rounded"></div>
+          <div className="w-1/2 h-4 mb-2 bg-gray-200 rounded"></div>
+          <div className="h-32 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -99,13 +156,13 @@ export default function RecommendationManager() {
         <h2 className="text-2xl font-bold text-gray-900">
           Recommendation System
         </h2>
-        <p className="text-gray-600 mt-1">
+        <p className="mt-1 text-gray-600">
           Configure decision support system criteria and rules
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+      <div className="mb-6 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div className="border-b border-gray-200">
           <div className="flex">
             <button
@@ -135,13 +192,14 @@ export default function RecommendationManager() {
           {/* Criteria Weights Tab */}
           {activeTab === "weights" && (
             <div>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-gray-600">
-                  Define importance weights for each position's criteria
+                  Define importance weights for each position's criteria (total
+                  should be 100%)
                 </p>
                 <button
                   onClick={handleAddWeight}
-                  className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  className="flex items-center px-4 py-2 space-x-2 text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Weight</span>
@@ -161,7 +219,7 @@ export default function RecommendationManager() {
                   return (
                     <div
                       key={position}
-                      className="border border-gray-200 rounded-lg p-4"
+                      className="p-4 border border-gray-200 rounded-lg"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-gray-900">
@@ -182,15 +240,15 @@ export default function RecommendationManager() {
                         {positionWeights.map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center space-x-3 bg-gray-50 p-3 rounded"
+                            className="flex items-center p-3 space-x-3 rounded bg-gray-50"
                           >
                             <select
-                              value={item.criteria}
+                              value={item.criteria_name}
                               onChange={(e) =>
                                 setCriteriaWeights((prev) =>
                                   prev.map((w) =>
                                     w.id === item.id
-                                      ? { ...w, criteria: e.target.value }
+                                      ? { ...w, criteria_name: e.target.value }
                                       : w
                                   )
                                 )
@@ -220,7 +278,7 @@ export default function RecommendationManager() {
 
                             <button
                               onClick={() => handleDeleteWeight(item.id)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                              className="p-2 text-red-600 transition rounded-lg hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -237,13 +295,13 @@ export default function RecommendationManager() {
           {/* Recommendation Rules Tab */}
           {activeTab === "rules" && (
             <div>
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-gray-600">
-                  Define automated recommendation rules based on conditions
+                  Define automated recommendation rules using JSON conditions
                 </p>
                 <button
                   onClick={handleAddRule}
-                  className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  className="flex items-center px-4 py-2 space-x-2 text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Rule</span>
@@ -254,48 +312,58 @@ export default function RecommendationManager() {
                 {recommendationRules.map((rule, index) => (
                   <div
                     key={rule.id}
-                    className="border border-gray-200 rounded-lg p-4"
+                    className="p-4 border border-gray-200 rounded-lg"
                   >
                     <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <span className="text-indigo-600 font-bold">
+                      <div className="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg">
+                        <span className="font-bold text-indigo-600">
                           {index + 1}
                         </span>
                       </div>
 
                       <div className="flex-1 space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Trigger Condition
+                          <label className="block mb-2 text-sm font-medium text-gray-700">
+                            Trigger Condition (JSON format)
                           </label>
-                          <input
-                            type="text"
-                            value={rule.condition}
+                          <textarea
+                            value={rule.trigger_condition}
                             onChange={(e) =>
                               setRecommendationRules((prev) =>
                                 prev.map((r) =>
                                   r.id === rule.id
-                                    ? { ...r, condition: e.target.value }
+                                    ? {
+                                        ...r,
+                                        trigger_condition: e.target.value,
+                                      }
                                     : r
                                 )
                               )
                             }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                            placeholder="e.g., Physical Score < 5"
+                            rows={2}
+                            className="w-full px-3 py-2 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                            placeholder='{"Cedera": ">=7", "Fleksibilitas": "<5"}'
                           />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Use metric names like: Cedera, Fleksibilitas,
+                            Stress, etc.
+                          </p>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Recommendation
+                          <label className="block mb-2 text-sm font-medium text-gray-700">
+                            Recommendation Text
                           </label>
                           <textarea
-                            value={rule.recommendation}
+                            value={rule.recommendation_text}
                             onChange={(e) =>
                               setRecommendationRules((prev) =>
                                 prev.map((r) =>
                                   r.id === rule.id
-                                    ? { ...r, recommendation: e.target.value }
+                                    ? {
+                                        ...r,
+                                        recommendation_text: e.target.value,
+                                      }
                                     : r
                                 )
                               )
@@ -309,7 +377,7 @@ export default function RecommendationManager() {
 
                       <button
                         onClick={() => handleDeleteRule(rule.id)}
-                        className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="flex-shrink-0 p-2 text-red-600 transition rounded-lg hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -318,7 +386,7 @@ export default function RecommendationManager() {
                 ))}
 
                 {recommendationRules.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="py-12 text-center text-gray-500">
                     <Settings className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No recommendation rules defined</p>
                   </div>
@@ -333,10 +401,11 @@ export default function RecommendationManager() {
       <div className="flex justify-end">
         <button
           onClick={handleSave}
-          className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+          disabled={saving}
+          className="flex items-center px-6 py-3 space-x-2 text-white transition bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          <span>Save Changes</span>
+          <span>{saving ? "Saving..." : "Save Changes"}</span>
         </button>
       </div>
     </div>
