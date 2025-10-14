@@ -1,3 +1,76 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Range slider styling UNUSED FOR NOW*/
+.range-slider {
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+  border: 2px solid white;
+}
+
+.range-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.2);
+  border: 2px solid white;
+}
+
+.range-slider-green {
+  background: linear-gradient(
+    to right,
+    #10b981 0%,
+    #10b981 50%,
+    #e5e7eb 50%,
+    #e5e7eb 100%
+  );
+}
+
+.range-slider-blue {
+  background: linear-gradient(
+    to right,
+    #3b82f6 0%,
+    #3b82f6 50%,
+    #e5e7eb 50%,
+    #e5e7eb 100%
+  );
+}
+
+.range-slider-yellow {
+  background: linear-gradient(
+    to right,
+    #f59e0b 0%,
+    #f59e0b 50%,
+    #e5e7eb 50%,
+    #e5e7eb 100%
+  );
+}
+
+.range-slider-red {
+  background: linear-gradient(
+    to right,
+    #ef4444 0%,
+    #ef4444 50%,
+    #e5e7eb 50%,
+    #e5e7eb 100%
+  );
+}

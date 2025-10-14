@@ -24,12 +24,7 @@ const toastStyles = {
   },
 };
 
-export default function Toast({
-  message,
-  type = "info",
-  onClose,
-  duration = 3000,
-}) {
+export function Toast({ message, type = "info", onClose, duration = 3000 }) {
   const style = toastStyles[type] || toastStyles.info;
   const Icon = style.icon;
 
@@ -54,7 +49,7 @@ export default function Toast({
       {onClose && (
         <button
           onClick={onClose}
-          className="flex-shrink-0 hover:opacity-70 transition"
+          className="flex-shrink-0 transition hover:opacity-70"
         >
           <X className="w-4 h-4" />
         </button>
@@ -66,7 +61,7 @@ export default function Toast({
 // Toast container component for managing multiple toasts
 export function ToastContainer({ toasts, removeToast }) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed z-50 space-y-2 top-4 right-4">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

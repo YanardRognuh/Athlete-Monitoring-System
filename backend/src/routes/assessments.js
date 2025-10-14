@@ -122,6 +122,18 @@ router.post("/", authorizeRole("medis"), (req, res) => {
       return res.status(404).json({ error: "Athlete not found" });
     }
 
+    // Check if assessment already exists for this athlete on this date
+    const existingAssessment = db
+      .prepare("SELECT id FROM assessments WHERE athlete_id = ? AND date = ?")
+      .get(athleteId, date);
+
+    if (existingAssessment) {
+      return res.status(400).json({
+        error:
+          "Assessment already exists for this athlete on the selected date",
+      });
+    }
+
     // Begin transaction
     const insertAssessment = db.prepare(`
       INSERT INTO assessments (athlete_id, user_id, date, weight_kg, notes)

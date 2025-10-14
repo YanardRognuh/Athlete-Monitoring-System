@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { athleteAPI, assessmentAPI } from "../../services/api";
 import { Save, AlertCircle } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
 
 const METRIC_STRUCTURE = {
   Rehabilitasi: ["Cedera", "Pemulihan"],
@@ -32,8 +33,9 @@ export default function AssessmentForm() {
   const [notes, setNotes] = useState("");
   const [metrics, setMetrics] = useState({});
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const { addToast } = useToast();
 
   useEffect(() => {
     fetchAthletes();
@@ -75,13 +77,16 @@ export default function AssessmentForm() {
     e.preventDefault();
 
     if (!selectedAthlete) {
-      setError("Please select an athlete");
+      addToast("Please select an athlete", "error"); // ← Show toast
       return;
     }
 
+    setShowConfirm(true);
+  };
+
+  const confirmSave = async () => {
+    setShowConfirm(false);
     setLoading(true);
-    setError("");
-    setSuccess(false);
 
     try {
       await assessmentAPI.create({
@@ -92,14 +97,14 @@ export default function AssessmentForm() {
         metrics,
       });
 
-      setSuccess(true);
+      addToast("Assessment created successfully!", "success"); // ← Show success toast
       setNotes("");
       setWeight("");
       initializeMetrics();
-
-      setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.error || "Failed to create assessment");
+      const errorMsg =
+        err.response?.data?.error || "Failed to create assessment";
+      addToast(errorMsg, "error"); // ← Show error toast
     } finally {
       setLoading(false);
     }
@@ -119,16 +124,35 @@ export default function AssessmentForm() {
         <p className="mt-1 text-gray-600">Record athlete medical assessment</p>
       </div>
 
-      {success && (
-        <div className="px-4 py-3 mb-6 text-green-700 border border-green-200 rounded-lg bg-green-50">
-          Assessment created successfully!
-        </div>
-      )}
-
-      {error && (
-        <div className="flex items-center px-4 py-3 mb-6 text-red-700 border border-red-200 rounded-lg bg-red-50">
-          <AlertCircle className="w-5 h-5 mr-2" />
-          {error}
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="w-full max-w-md p-6 bg-white rounded-xl">
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              Confirm Save
+            </h3>
+            <p className="mb-4 text-gray-600">
+              Are you sure you want to save this assessment? This action cannot
+              be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                className="px-4 py-2 text-gray-700 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSave}
+                disabled={loading}
+                className="px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loading ? "Saving..." : "Yes, Save"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
