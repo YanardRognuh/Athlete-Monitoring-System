@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { athleteAPI } from "../../services/api";
 import { Users, Calendar, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
+import AthleteDetail from "./AthleteDetail";
 
 const statusColors = {
   Prima: "bg-green-100 text-green-800",
@@ -11,6 +13,7 @@ const statusColors = {
 
 export default function AthleteList() {
   const [athletes, setAthletes] = useState([]);
+  const [selectedAthleteId, setSelectedAthleteId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -34,9 +37,9 @@ export default function AthleteList() {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+          <div key={i} className="p-6 bg-white rounded-lg animate-pulse">
+            <div className="w-1/4 h-4 mb-4 bg-gray-200 rounded"></div>
+            <div className="w-1/2 h-3 bg-gray-200 rounded"></div>
           </div>
         ))}
       </div>
@@ -45,18 +48,27 @@ export default function AthleteList() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+      <div className="p-4 text-red-700 border border-red-200 rounded-lg bg-red-50">
         {error}
       </div>
     );
   }
 
+  if (selectedAthleteId) {
+    return (
+      <AthleteDetail
+        athleteId={selectedAthleteId}
+        onBack={() => setSelectedAthleteId(null)}
+      />
+    );
+  }
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Athletes</h2>
-          <p className="text-gray-600 mt-1">
+          <p className="mt-1 text-gray-600">
             Manage and monitor athlete information
           </p>
         </div>
@@ -70,14 +82,14 @@ export default function AthleteList() {
         {athletes.map((athlete) => (
           <div
             key={athlete.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition"
+            className="p-6 transition bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md"
           >
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
                   {athlete.name}
                 </h3>
-                <div className="flex items-center text-sm text-gray-600 mt-1">
+                <div className="flex items-center mt-1 text-sm text-gray-600">
                   <MapPin className="w-4 h-4 mr-1" />
                   {athlete.position}
                 </div>
@@ -98,17 +110,24 @@ export default function AthleteList() {
               </div>
             )}
 
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              <Link
+                to="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedAthleteId(athlete.id);
+                }}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              >
                 View Details →
-              </button>
+              </Link>
             </div>
           </div>
         ))}
       </div>
 
       {athletes.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
+        <div className="py-12 text-center text-gray-500">
           <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <p>No athletes found</p>
         </div>
