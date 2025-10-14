@@ -16,7 +16,8 @@ app.use(express.json());
 const authRoutes = require("./routes/auth");
 const athleteRoutes = require("./routes/athletes");
 const assessmentRoutes = require("./routes/assessments");
-const { teamRouter, exerciseRouter } = require("./routes/exercises");
+const teamRouter = require("./routes/teams");
+const exerciseRouter = require("./routes/exercises").exerciseRouter;
 const dashboardRoutes = require("./routes/dashboard");
 const recommendationRoutes = require("./routes/recommendations");
 
