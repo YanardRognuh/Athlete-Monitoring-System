@@ -488,6 +488,150 @@ const deleteRecommendationRule = (id) => {
   return db.prepare("DELETE FROM recommendation_rules WHERE id = ?").run(id);
 };
 
+// Evaluate recommendation rules against athlete's latest metrics
+function evaluateRecommendations(athleteId, teamId) {
+  // Get latest assessment metrics
+  const latestAssessment = db
+    .prepare(
+      `
+      SELECT id FROM assessments 
+      WHERE athlete_id = ? 
+      ORDER BY date DESC 
+      LIMIT 1
+    `
+    )
+    .get(athleteId);
+
+  if (!latestAssessment) return [];
+
+  const metrics = db
+    .prepare(
+      `
+      SELECT metric_category, metric_name, value
+      FROM assessment_metrics
+      WHERE assessment_id = ?
+    `
+    )
+    .all(latestAssessment.id);
+
+  // Convert to lookup object: { "Cedera": 8, "Fleksibilitas": 6, ... }
+  const metricMap = {};
+  metrics.forEach((m) => {
+    metricMap[m.metric_name] = m.value;
+  });
+
+  // Get all rules
+  const rules = getRecommendationRules();
+
+  // Evaluate each rule
+  const matchedRecommendations = [];
+  rules.forEach((rule) => {
+    try {
+      const condition = JSON.parse(rule.trigger_condition);
+      let matches = true;
+
+      // Simple condition format: { "Cedera": ">=7", "Fleksibilitas": "<5" }
+      Object.entries(condition).forEach(([metricName, expression]) => {
+        const actualValue = metricMap[metricName];
+        if (actualValue === undefined) {
+          matches = false;
+          return;
+        }
+
+        // Parse expression like ">=7", "<5", "==8"
+        const operator = expression.match(/^[<>=!]+/)?.[0] || "==";
+        const threshold = parseFloat(expression.replace(/^[<>=!]+/, ""));
+
+        switch (operator) {
+          case ">=":
+            if (!(actualValue >= threshold)) matches = false;
+            break;
+          case ">":
+            if (!(actualValue > threshold)) matches = false;
+            break;
+          case "<=":
+            if (!(actualValue <= threshold)) matches = false;
+            break;
+          case "<":
+            if (!(actualValue < threshold)) matches = false;
+            break;
+          case "==":
+          case "=":
+            if (!(actualValue === threshold)) matches = false;
+            break;
+          case "!=":
+            if (!(actualValue !== threshold)) matches = false;
+            break;
+          default:
+            matches = false;
+        }
+      });
+
+      if (matches) {
+        matchedRecommendations.push({
+          priority: rule.priority,
+          recommendation: rule.recommendation_text,
+        });
+      }
+    } catch (e) {
+      console.warn(
+        `Invalid rule condition for rule ID ${rule.id}:`,
+        rule.trigger_condition
+      );
+    }
+  });
+
+  // Sort by priority (lowest number = highest priority)
+  return matchedRecommendations.sort((a, b) => a.priority - b.priority);
+}
+
+// Generate training program recommendations
+function generateTrainingRecommendations(athleteId, teamId) {
+  const athlete = getAthleteById(athleteId, teamId);
+  if (!athlete) return [];
+
+  // Get latest physical metrics
+  const latestPhysical = getLatestPhysicalAssessment(athleteId, teamId);
+  if (!latestPhysical) return [];
+
+  // Get criteria weights for position
+  const weights = getCriteriaWeightsByPosition(athlete.position);
+
+  // Get all exercises
+  const exercises = getExercises();
+
+  // Score exercises based on focus_area match and athlete status
+  const scoredExercises = exercises.map((ex) => {
+    let score = 0;
+
+    // Boost score if exercise focus matches high-weight criteria
+    weights.forEach((w) => {
+      if (ex.focus_area.toLowerCase().includes(w.criteria_name.toLowerCase())) {
+        score += w.weight * 10;
+      }
+    });
+
+    // Penalize if athlete is in rehabilitation
+    if (athlete.status === "Rehabilitasi" && !ex.type.includes("Rehab")) {
+      score -= 5;
+    }
+
+    return { ...ex, score };
+  });
+
+  // Return top 5 exercises
+  return scoredExercises
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5)
+    .map((ex) => ({
+      exercise_id: ex.id,
+      name: ex.name,
+      type: ex.type,
+      focus_area: ex.focus_area,
+      description: ex.description,
+    }));
+}
+
 module.exports = {
   // Athlete queries
   getAthleteById,
@@ -530,4 +674,6 @@ module.exports = {
 
   // Helper functions
   calculateAthleteStatus,
+  evaluateRecommendations,
+  generateTrainingRecommendations,
 };

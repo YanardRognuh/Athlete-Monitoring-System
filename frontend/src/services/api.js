@@ -55,6 +55,8 @@ export const dashboardAPI = {
   getMental: (athleteId) => api.get(`/dashboard/athlete/${athleteId}/mental`),
   getSleep: (athleteId) => api.get(`/dashboard/athlete/${athleteId}/sleep`),
   getTeamOverview: () => api.get("/dashboard/team/overview"),
+  getRecommendations: (athleteId) =>
+    api.get(`/recommendations/athlete/${athleteId}`),
 };
 
 // Exercise APIs
