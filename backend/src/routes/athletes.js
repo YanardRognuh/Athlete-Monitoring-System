@@ -160,9 +160,34 @@ router.delete("/:id", (req, res) => {
         .json({ error: "Only coaches can delete athletes" });
     }
 
-    const result = db
-      .prepare("DELETE FROM athletes WHERE id = ? AND team_id = ?")
-      .run(req.params.id, req.user.teamId);
+    const transaction = db.transaction(() => {
+      const athleteId = req.params.id;
+
+      // 1. Delete all assessment_metrics for this athlete's assessments
+      db.prepare(
+        `
+        DELETE FROM assessment_metrics 
+        WHERE assessment_id IN (SELECT id FROM assessments WHERE athlete_id = ?)
+      `
+      ).run(athleteId);
+
+      // 2. Delete all assessments for this athlete
+      db.prepare("DELETE FROM assessments WHERE athlete_id = ?").run(athleteId);
+
+      // 3. Delete all training programs for this athlete
+      db.prepare("DELETE FROM training_programs WHERE athlete_id = ?").run(
+        athleteId
+      );
+
+      // 4. Finally, delete the athlete
+      const result = db
+        .prepare("DELETE FROM athletes WHERE id = ? AND team_id = ?")
+        .run(athleteId, req.user.teamId);
+
+      return result;
+    });
+
+    const result = transaction();
 
     if (result.changes === 0) {
       return res.status(404).json({ error: "Athlete not found" });
