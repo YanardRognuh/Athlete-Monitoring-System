@@ -22,6 +22,12 @@ router.get("/athlete/:athleteId", (req, res) => {
       req.user.teamId
     );
 
+    // Get training recommendations
+    const trainingRecommendations = queries.generateTrainingRecommendations(
+      athleteId,
+      req.user.teamId
+    );
+
     res.json({
       athlete: {
         id: athlete.id,
@@ -90,9 +96,11 @@ router.get("/training/:athleteId", (req, res) => {
     const scoredExercises = exercises.map((ex) => {
       let score = 0;
       weights.forEach((w) => {
-        // Exact match (case-insensitive)
-        if (ex.focus_area.toLowerCase() === w.criteria_name.toLowerCase()) {
-          score += w.weight * 100;
+        // Match focus_area (case-insensitive partial match)
+        if (
+          ex.focus_area.toLowerCase().includes(w.criteria_name.toLowerCase())
+        ) {
+          score += w.weight * 100; // Convert weight (0.25) → 25 points
         }
       });
 
